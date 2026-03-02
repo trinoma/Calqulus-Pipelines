@@ -1,0 +1,97 @@
+############################################################
+# Calqulus Pipeline - Gait Analysis (Kinetics only)
+# GRF-based Gait Event Detection
+# Outputs: Heel Strike & Toe Off events (Left & Right)
+############################################################
+
+# ── SECTION 1: Import raw vertical GRF from force plates ──
+
+- parameter: LeftGRF_vertical
+  steps:
+    - import: ForcePlate1.fz      # Fz = vertical component
+
+- parameter: RightGRF_vertical
+  steps:
+    - import: ForcePlate2.fz
+
+# ── SECTION 2: Low-pass filter to smooth GRF signals ──
+# 4th-order Butterworth at 20 Hz removes noise before
+# threshold detection
+
+- parameter: LeftGRF_filtered
+  steps:
+    - import: LeftGRF_vertical
+    - lowpass:
+        cutoff: 20                # Hz
+        order: 4
+
+- parameter: RightGRF_filtered
+  steps:
+    - import: RightGRF_vertical
+    - lowpass:
+        cutoff: 20
+        order: 4
+
+# ── SECTION 3: Gait Event Detection ──
+# Threshold: 20 N (gold-standard: 5–20 N)
+# Heel Strike (HS) = rising edge  → foot contacts ground
+# Toe Off     (TO) = falling edge → foot leaves ground
+
+- event: Left_HeelStrike
+  steps:
+    - import: LeftGRF_filtered
+    - eventMask:
+        signal: LeftGRF_filtered
+        threshold: 20
+        direction: up             # force rising above 20 N
+
+- event: Left_ToeOff
+  steps:
+    - import: LeftGRF_filtered
+    - eventMask:
+        signal: LeftGRF_filtered
+        threshold: 20
+        direction: down           # force falling below 20 N
+
+- event: Right_HeelStrike
+  steps:
+    - import: RightGRF_filtered
+    - eventMask:
+        signal: RightGRF_filtered
+        threshold: 20
+        direction: up
+
+- event: Right_ToeOff
+  steps:
+    - import: RightGRF_filtered
+    - eventMask:
+        signal: RightGRF_filtered
+        threshold: 20
+        direction: down
+
+# ── SECTION 4: Gait Cycle Segmentation (HS to HS) ──
+
+- parameter: Left_GaitCycle
+  steps:
+    - import: LeftGRF_filtered
+    - eventMask:
+        start: Left_HeelStrike
+        end: Left_HeelStrike
+
+- parameter: Right_GaitCycle
+  steps:
+    - import: RightGRF_filtered
+    - eventMask:
+        start: Right_HeelStrike
+        end: Right_HeelStrike
+
+# ── SECTION 5: Outputs ──
+
+- output: Left_HeelStrike
+- output: Left_ToeOff
+- output: Right_HeelStrike
+- output: Right_ToeOff
+- output: Left_GaitCycle
+- output: Right_GaitCycle
+- output: LeftGRF_filtered
+- output: RightGRF_filtered
