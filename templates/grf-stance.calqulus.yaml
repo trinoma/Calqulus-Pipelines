@@ -6,17 +6,14 @@
 # Heel Strike (HS) = vertical GRF rising through the contact threshold.
 # Toe Off    (TO)  = vertical GRF falling through the contact threshold.
 #
-# Threshold: 0.05 BW (5% of body weight). Adjust grf_contact_threshold below
-# if your capture conditions require a different sensitivity.
+# Threshold: 0.05 BW (5% of body weight). Adjust the value: 0.05 lines below
+# if your capture conditions require different sensitivity.
 #
 # GRF components are reported in lab-frame coordinates:
 #   x = mediolateral (ML)
 #   y = anteroposterior (AP)
 #   z = vertical (up)
 # All forces are normalized to body weight (BW = $bodyMass × 9.81 N).
-#
-# LeftPlotStart / LeftPlotEnd (and Right equivalents) define the stance-phase
-# boundaries. The report renders GRF as a 0–100% normalized time series.
 
 ############
 ## EVENTS ##
@@ -26,13 +23,7 @@
   steps:
     - multiply: [$bodyMass, 9.81]
 
-# Contact threshold — 5% BW. Change this value to adjust HS/TO sensitivity.
-- parameter: grf_contact_threshold
-  steps:
-    - import: [0.05]
-
-# ---
-# Left Heel Strike: vertical GRF crosses threshold upward
+# Left Heel Strike: vertical GRF rising through 5% BW
 - event: LHS
   set: left
   where:
@@ -43,7 +34,7 @@
       value: 0.05
       direction: up
 
-# Left Toe Off: vertical GRF crosses threshold downward
+# Left Toe Off: vertical GRF falling through 5% BW
 - event: LTO
   set: left
   where:
@@ -54,7 +45,6 @@
       value: 0.05
       direction: down
 
-# ---
 # Right Heel Strike
 - event: RHS
   set: right
@@ -78,7 +68,10 @@
       direction: down
 
 # ---
-# Stance-phase plot boundaries — report uses these to render a 0–100% normalized time series
+# Plot window events
+# The report uses LeftPlotStartForce/LeftPlotEndForce to render GRF graphs
+# on a 0–100% normalized stance-phase time axis.
+
 - event: LeftPlotStart
   set: left
   where:
@@ -87,6 +80,20 @@
     - import: LHS
 
 - event: LeftPlotEnd
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LTO
+
+- event: LeftPlotStartForce
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LHS
+
+- event: LeftPlotEndForce
   set: left
   where:
     force: left
@@ -106,6 +113,35 @@
     force: right
   steps:
     - import: RTO
+
+- event: RightPlotStartForce
+  set: right
+  where:
+    force: right
+  steps:
+    - import: RHS
+
+- event: RightPlotEndForce
+  set: right
+  where:
+    force: right
+  steps:
+    - import: RTO
+
+# LON / RON: foot contact on events (used by some report graph definitions)
+- event: LON
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LHS
+
+- event: RON
+  set: right
+  where:
+    force: right
+  steps:
+    - import: RHS
 
 ############
 ## SERIES ##
@@ -128,7 +164,7 @@
     - vector: [RightFootContact.fx, RightFootContact.fy, RightFootContact.fz]
     - divide: [$prev, BodyWeightNewton]
 
-# Negated AP force — used internally to locate braking peak via peakFinder
+# Negated AP force — used internally to locate the braking peak
 - parameter: Left_Braking_Force
   set: left
   where:
@@ -148,7 +184,6 @@
 ##############
 
 # --- Stance duration ---
-# Mean across all strides in the trial
 - parameter: Left Stance Duration
   set: left
   where:
@@ -166,9 +201,9 @@
     - mean:
 
 # --- Vertical GRF peaks ---
-# Walking produces a double-peak vertical GRF pattern.
-# @1  = first peak  (loading response, early stance)
-# @-1 = last  peak  (push-off, late stance)
+# Walking produces a double-peak pattern.
+# @1  = first peak (loading response, early stance)
+# @-1 = last  peak (push-off, late stance)
 
 - event: Left_GRF_Loading_Peak
   set: left
@@ -237,7 +272,7 @@
 # --- AP force peaks ---
 # Sign convention (lab frame, subject walking in +y direction):
 #   Braking    = negative GRF.y (early stance)
-#   Propulsion = positive GRF.y (late  stance)
+#   Propulsion = positive GRF.y (late stance)
 # If the subject walks in a different lab direction, negate GRF.y as needed.
 
 - event: Left_Braking_Peak
