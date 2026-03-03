@@ -1,0 +1,15 @@
+# GRF Blank Test Pipeline
+#
+# Diagnostic pipeline — applies grf-blank.calqulus.yaml to Gait/Walk/Run trials.
+# Outputs flat-zero Left/Right GRF series and hardware contact events only.
+#
+# If a blank (flat-zero) graph appears in the report:
+#   → The report infrastructure works. The issue is in grf-stance.calqulus.yaml.
+# If no graph appears:
+#   → The report does not recognise these parameter names, or it requires
+#     additional parameters (e.g. kinematic joint angles) to activate.
+
+- template: templates/grf-blank.calqulus.yaml
+  where:
+    name: ^(Gait|Walk|Run)*
+    force: any
