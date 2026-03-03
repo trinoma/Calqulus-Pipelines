@@ -1,0 +1,310 @@
+# Ground Reaction Force — Stance Phase
+#
+# Event detection is based solely on vertical force threshold (kinetics only).
+# No kinematic marker data is required.
+#
+# Heel Strike (HS) = vertical GRF rising through the contact threshold.
+# Toe Off    (TO)  = vertical GRF falling through the contact threshold.
+#
+# Threshold: 0.05 BW (5% of body weight). Adjust grf_contact_threshold below
+# if your capture conditions require a different sensitivity.
+#
+# GRF components are reported in lab-frame coordinates:
+#   x = mediolateral (ML)
+#   y = anteroposterior (AP)
+#   z = vertical (up)
+# All forces are normalized to body weight (BW = $bodyMass × 9.81 N).
+#
+# LeftPlotStart / LeftPlotEnd (and Right equivalents) define the stance-phase
+# boundaries. The report renders GRF as a 0–100% normalized time series.
+
+############
+## EVENTS ##
+############
+
+- parameter: BodyWeightNewton
+  steps:
+    - multiply: [$bodyMass, 9.81]
+
+# Contact threshold — 5% BW. Change this value to adjust HS/TO sensitivity.
+- parameter: grf_contact_threshold
+  steps:
+    - import: [0.05]
+
+# ---
+# Left Heel Strike: vertical GRF crosses threshold upward
+- event: LHS
+  set: left
+  where:
+    force: left
+  steps:
+    - divide: [LeftFootContact.fz, BodyWeightNewton]
+    - threshold: $prev
+      value: 0.05
+      direction: up
+
+# Left Toe Off: vertical GRF crosses threshold downward
+- event: LTO
+  set: left
+  where:
+    force: left
+  steps:
+    - divide: [LeftFootContact.fz, BodyWeightNewton]
+    - threshold: $prev
+      value: 0.05
+      direction: down
+
+# ---
+# Right Heel Strike
+- event: RHS
+  set: right
+  where:
+    force: right
+  steps:
+    - divide: [RightFootContact.fz, BodyWeightNewton]
+    - threshold: $prev
+      value: 0.05
+      direction: up
+
+# Right Toe Off
+- event: RTO
+  set: right
+  where:
+    force: right
+  steps:
+    - divide: [RightFootContact.fz, BodyWeightNewton]
+    - threshold: $prev
+      value: 0.05
+      direction: down
+
+# ---
+# Stance-phase plot boundaries — report uses these to render a 0–100% normalized time series
+- event: LeftPlotStart
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LHS
+
+- event: LeftPlotEnd
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LTO
+
+- event: RightPlotStart
+  set: right
+  where:
+    force: right
+  steps:
+    - import: RHS
+
+- event: RightPlotEnd
+  set: right
+  where:
+    force: right
+  steps:
+    - import: RTO
+
+############
+## SERIES ##
+############
+
+# GRF normalized to body weight — all three components in lab frame
+- parameter: Left GRF
+  set: left
+  where:
+    force: left
+  steps:
+    - vector: [LeftFootContact.fx, LeftFootContact.fy, LeftFootContact.fz]
+    - divide: [$prev, BodyWeightNewton]
+
+- parameter: Right GRF
+  set: right
+  where:
+    force: right
+  steps:
+    - vector: [RightFootContact.fx, RightFootContact.fy, RightFootContact.fz]
+    - divide: [$prev, BodyWeightNewton]
+
+# Negated AP force — used internally to locate braking peak via peakFinder
+- parameter: Left_Braking_Force
+  set: left
+  where:
+    force: left
+  steps:
+    - negate: Left GRF.y
+
+- parameter: Right_Braking_Force
+  set: right
+  where:
+    force: right
+  steps:
+    - negate: Right GRF.y
+
+##############
+## SCALARS  ##
+##############
+
+# --- Stance duration ---
+# Mean across all strides in the trial
+- parameter: Left Stance Duration
+  set: left
+  where:
+    force: left
+  steps:
+    - eventDuration: [LHS, LTO]
+    - mean:
+
+- parameter: Right Stance Duration
+  set: right
+  where:
+    force: right
+  steps:
+    - eventDuration: [RHS, RTO]
+    - mean:
+
+# --- Vertical GRF peaks ---
+# Walking produces a double-peak vertical GRF pattern.
+# @1  = first peak  (loading response, early stance)
+# @-1 = last  peak  (push-off, late stance)
+
+- event: Left_GRF_Loading_Peak
+  set: left
+  where:
+    force: left
+  steps:
+    - peakFinder: Left GRF.z
+    - eventMask: [$prev, LHS, LTO]
+    - import: $prev@1
+
+- event: Left_GRF_Pushoff_Peak
+  set: left
+  where:
+    force: left
+  steps:
+    - peakFinder: Left GRF.z
+    - eventMask: [$prev, LHS, LTO]
+    - import: $prev@-1
+
+- event: Right_GRF_Loading_Peak
+  set: right
+  where:
+    force: right
+  steps:
+    - peakFinder: Right GRF.z
+    - eventMask: [$prev, RHS, RTO]
+    - import: $prev@1
+
+- event: Right_GRF_Pushoff_Peak
+  set: right
+  where:
+    force: right
+  steps:
+    - peakFinder: Right GRF.z
+    - eventMask: [$prev, RHS, RTO]
+    - import: $prev@-1
+
+- parameter: Left GRF.z@Left_GRF_Loading_Peak
+  set: left
+  where:
+    force: left
+  steps:
+    - import: Left GRF.z@Left_GRF_Loading_Peak
+
+- parameter: Left GRF.z@Left_GRF_Pushoff_Peak
+  set: left
+  where:
+    force: left
+  steps:
+    - import: Left GRF.z@Left_GRF_Pushoff_Peak
+
+- parameter: Right GRF.z@Right_GRF_Loading_Peak
+  set: right
+  where:
+    force: right
+  steps:
+    - import: Right GRF.z@Right_GRF_Loading_Peak
+
+- parameter: Right GRF.z@Right_GRF_Pushoff_Peak
+  set: right
+  where:
+    force: right
+  steps:
+    - import: Right GRF.z@Right_GRF_Pushoff_Peak
+
+# --- AP force peaks ---
+# Sign convention (lab frame, subject walking in +y direction):
+#   Braking    = negative GRF.y (early stance)
+#   Propulsion = positive GRF.y (late  stance)
+# If the subject walks in a different lab direction, negate GRF.y as needed.
+
+- event: Left_Braking_Peak
+  set: left
+  where:
+    force: left
+  steps:
+    - peakFinder: Left_Braking_Force
+    - eventMask: [$prev, LHS, LTO]
+    - import: $prev@1
+
+- event: Right_Braking_Peak
+  set: right
+  where:
+    force: right
+  steps:
+    - peakFinder: Right_Braking_Force
+    - eventMask: [$prev, RHS, RTO]
+    - import: $prev@1
+
+- event: Left_Propulsion_Peak
+  set: left
+  where:
+    force: left
+  steps:
+    - peakFinder: Left GRF.y
+    - eventMask: [$prev, LHS, LTO]
+    - import: $prev@-1
+
+- event: Right_Propulsion_Peak
+  set: right
+  where:
+    force: right
+  steps:
+    - peakFinder: Right GRF.y
+    - eventMask: [$prev, RHS, RTO]
+    - import: $prev@-1
+
+- parameter: Left GRF.y@Left_Braking_Peak
+  set: left
+  where:
+    force: left
+  steps:
+    - import: Left GRF.y@Left_Braking_Peak
+
+- parameter: Right GRF.y@Right_Braking_Peak
+  set: right
+  where:
+    force: right
+  steps:
+    - import: Right GRF.y@Right_Braking_Peak
+
+- parameter: Left GRF.y@Left_Propulsion_Peak
+  set: left
+  where:
+    force: left
+  steps:
+    - import: Left GRF.y@Left_Propulsion_Peak
+
+- parameter: Right GRF.y@Right_Propulsion_Peak
+  set: right
+  where:
+    force: right
+  steps:
+    - import: Right GRF.y@Right_Propulsion_Peak
+
+# Subject body mass (exported for report)
+- parameter: MASS
+  steps:
+    - import: $bodyMass
