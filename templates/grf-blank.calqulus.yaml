@@ -1,0 +1,99 @@
+# GRF Blank Test Template
+#
+# Diagnostic template — exports only the minimum events and a flat-zero
+# Left / Right GRF series.
+#
+# Purpose: verify that the report can render GRF graph panels at all.
+#   - If a flat line at 0 appears in the report → the report infrastructure
+#     works and the issue is in the data computation of grf-stance.calqulus.yaml.
+#   - If nothing appears → the report template does not recognise the parameter
+#     names or requires additional data (e.g. kinematic parameters).
+
+# Hardware contact events — used as plot boundaries
+- event: LON_force
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LeftFootContact.events.on
+
+- event: LOFF_force
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LeftFootContact.events.off
+
+- event: RON_force
+  set: right
+  where:
+    force: right
+  steps:
+    - import: RightFootContact.events.on
+
+- event: ROFF_force
+  set: right
+  where:
+    force: right
+  steps:
+    - import: RightFootContact.events.off
+
+- event: LeftPlotStartForce
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LON_force
+
+- event: LeftPlotEndForce
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LOFF_force
+
+- event: RightPlotStartForce
+  set: right
+  where:
+    force: right
+  steps:
+    - import: RON_force
+
+- event: RightPlotEndForce
+  set: right
+  where:
+    force: right
+  steps:
+    - import: ROFF_force
+
+- event: LON
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LON_force
+
+- event: RON
+  set: right
+  where:
+    force: right
+  steps:
+    - import: RON_force
+
+# Flat-zero GRF series — shape matches real GRF but all values are 0.
+# If this appears in the report as a flat line, the pipeline→report link works.
+- parameter: Left GRF
+  set: left
+  where:
+    force: left
+  steps:
+    - vector: [LeftFootContact.fx, LeftFootContact.fy, LeftFootContact.fz]
+    - multiply: [$prev, 0]
+
+- parameter: Right GRF
+  set: right
+  where:
+    force: right
+  steps:
+    - vector: [RightFootContact.fx, RightFootContact.fy, RightFootContact.fz]
+    - multiply: [$prev, 0]
