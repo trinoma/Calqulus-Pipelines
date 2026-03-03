@@ -68,9 +68,41 @@
       direction: down
 
 # ---
+# Hardware contact events — mirrors events-kinetics.calqulus.yaml from the running pipeline.
+# These use the force-plate's built-in ON/OFF detection signals.
+- event: LON_force
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LeftFootContact.events.on
+
+- event: LOFF_force
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LeftFootContact.events.off
+
+- event: RON_force
+  set: right
+  where:
+    force: right
+  steps:
+    - import: RightFootContact.events.on
+
+- event: ROFF_force
+  set: right
+  where:
+    force: right
+  steps:
+    - import: RightFootContact.events.off
+
+# ---
 # Plot window events
-# The report uses LeftPlotStartForce/LeftPlotEndForce to render GRF graphs
-# on a 0–100% normalized stance-phase time axis.
+# LeftPlotStart / LeftPlotEnd — kinematics window (stance phase, LHS→LTO).
+# LeftPlotStartForce / LeftPlotEndForce — force graph window; uses hardware
+# contact events to match the running-analysis report exactly.
 
 - event: LeftPlotStart
   set: left
@@ -91,14 +123,14 @@
   where:
     force: left
   steps:
-    - import: LHS
+    - import: LON_force
 
 - event: LeftPlotEndForce
   set: left
   where:
     force: left
   steps:
-    - import: LTO
+    - import: LOFF_force
 
 - event: RightPlotStart
   set: right
@@ -119,24 +151,40 @@
   where:
     force: right
   steps:
-    - import: RHS
+    - import: RON_force
 
 - event: RightPlotEndForce
   set: right
   where:
     force: right
   steps:
-    - import: RTO
+    - import: ROFF_force
 
-# LON / RON: foot contact on events (used by some report graph definitions)
+# LON / RON: foot contact on events — must point to hardware events to
+# match what the running-analysis report references by name.
 - event: LON
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LON_force
+
+- event: RON
+  set: right
+  where:
+    force: right
+  steps:
+    - import: RON_force
+
+# LFS / RFS: standard foot-strike names expected by the running report.
+- event: LFS
   set: left
   where:
     force: left
   steps:
     - import: LHS
 
-- event: RON
+- event: RFS
   set: right
   where:
     force: right
