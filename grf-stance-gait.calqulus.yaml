@@ -1,0 +1,17 @@
+# GRF Stance Phase — Gait Pipeline
+#
+# Reports ground reaction force during the stance phase of gait using
+# kinetics-only event detection (no kinematic marker data required).
+#
+# Events (Heel Strike / Toe Off) are detected by a vertical-force threshold
+# (default: 5% BW). See templates/grf-stance/grf-stance.calqulus.yaml to
+# adjust the threshold value.
+#
+# Task naming convention: any trial whose task name starts with
+# "Gait", "Walk", or "Run" will be processed.
+# To apply to all tasks regardless of name, remove the "where: name:" filter.
+
+- template: templates/grf-stance.calqulus.yaml
+  where:
+    name: ^(Gait|Walk|Run)*
+    force: any
