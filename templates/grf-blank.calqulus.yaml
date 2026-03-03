@@ -1,15 +1,23 @@
 # GRF Blank Test Template
 #
-# Diagnostic template — exports only the minimum events and a flat-zero
-# Left / Right GRF series.
+# Diagnostic template — exports flat-zero GRF and flat-zero kinematics.
 #
-# Purpose: verify that the report can render GRF graph panels at all.
-#   - If a flat line at 0 appears in the report → the report infrastructure
-#     works and the issue is in the data computation of grf-stance.calqulus.yaml.
-#   - If nothing appears → the report template does not recognise the parameter
-#     names or requires additional data (e.g. kinematic parameters).
+# The running-analysis report requires kinematic parameters (joint angles)
+# to activate its graph pages. This template provides them as constant-zero
+# series so the report pages activate, while the GRF data is also zero.
+#
+# If flat-line graphs appear in the report:
+#   → The report needs kinematics. Switch back to grf-stance.calqulus.yaml
+#     and add real kinematic processing, OR request a kinematics-free
+#     GRF report template from Qualisys.
+# If still no graphs:
+#   → The parameter names are wrong or the report requires session metadata.
 
-# Hardware contact events — used as plot boundaries
+############
+## EVENTS ##
+############
+
+# Hardware contact events
 - event: LON_force
   set: left
   where:
@@ -37,6 +45,65 @@
     force: right
   steps:
     - import: RightFootContact.events.off
+
+# Standard gait events (foot strike / toe off) — aliases for hardware events
+- event: LFS
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LON_force
+
+- event: LTO
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LOFF_force
+
+- event: RFS
+  set: right
+  where:
+    force: right
+  steps:
+    - import: RON_force
+
+- event: RTO
+  set: right
+  where:
+    force: right
+  steps:
+    - import: ROFF_force
+
+# Plot window events
+# LeftPlotStart = LeftPlotEnd = LFS → stride-cycle normalization (running report convention)
+- event: LeftPlotStart
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LFS
+
+- event: LeftPlotEnd
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LFS
+
+- event: RightPlotStart
+  set: right
+  where:
+    force: right
+  steps:
+    - import: RFS
+
+- event: RightPlotEnd
+  set: right
+  where:
+    force: right
+  steps:
+    - import: RFS
 
 - event: LeftPlotStartForce
   set: left
@@ -80,8 +147,11 @@
   steps:
     - import: RON_force
 
-# Flat-zero GRF series — shape matches real GRF but all values are 0.
-# If this appears in the report as a flat line, the pipeline→report link works.
+############
+## SERIES ##
+############
+
+# Flat-zero GRF — correct time shape, all values 0.
 - parameter: Left GRF
   set: left
   where:
@@ -91,6 +161,72 @@
     - multiply: [$prev, 0]
 
 - parameter: Right GRF
+  set: right
+  where:
+    force: right
+  steps:
+    - vector: [RightFootContact.fx, RightFootContact.fy, RightFootContact.fz]
+    - multiply: [$prev, 0]
+
+# Fake kinematics — flat-zero 3D vectors matching GRF time shape.
+# Parameter names match the running-analysis report expectations.
+- parameter: Left Hip Angles
+  set: left
+  where:
+    force: left
+  steps:
+    - vector: [LeftFootContact.fx, LeftFootContact.fy, LeftFootContact.fz]
+    - multiply: [$prev, 0]
+
+- parameter: Right Hip Angles
+  set: right
+  where:
+    force: right
+  steps:
+    - vector: [RightFootContact.fx, RightFootContact.fy, RightFootContact.fz]
+    - multiply: [$prev, 0]
+
+- parameter: Left Knee Angles
+  set: left
+  where:
+    force: left
+  steps:
+    - vector: [LeftFootContact.fx, LeftFootContact.fy, LeftFootContact.fz]
+    - multiply: [$prev, 0]
+
+- parameter: Right Knee Angles
+  set: right
+  where:
+    force: right
+  steps:
+    - vector: [RightFootContact.fx, RightFootContact.fy, RightFootContact.fz]
+    - multiply: [$prev, 0]
+
+- parameter: Left Ankle Angles
+  set: left
+  where:
+    force: left
+  steps:
+    - vector: [LeftFootContact.fx, LeftFootContact.fy, LeftFootContact.fz]
+    - multiply: [$prev, 0]
+
+- parameter: Right Ankle Angles
+  set: right
+  where:
+    force: right
+  steps:
+    - vector: [RightFootContact.fx, RightFootContact.fy, RightFootContact.fz]
+    - multiply: [$prev, 0]
+
+- parameter: Left Pelvic Angles
+  set: left
+  where:
+    force: left
+  steps:
+    - vector: [LeftFootContact.fx, LeftFootContact.fy, LeftFootContact.fz]
+    - multiply: [$prev, 0]
+
+- parameter: Right Pelvic Angles
   set: right
   where:
     force: right
