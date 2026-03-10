@@ -12,7 +12,12 @@
 ############
 ## EVENTS ##
 ############
-
+- event: LeftPlotStart
+  set: left
+  where:
+    force: left
+  steps:
+    - import: LHS
 # Foot-contact events via raw force threshold (10 N — no $bodyMass needed)
 - event: LON_force
   set: left
