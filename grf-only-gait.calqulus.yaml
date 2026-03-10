@@ -121,20 +121,22 @@
 ## GRF TIME SERIES ##
 ####################
 # Named to match the Qualisys web report template (Left GRF / Right GRF).
-# No eventMask on the series — the report uses the LON/LOFF events to overlay
-# gait cycle markers on the time axis.
+# eventMask is required — it annotates the signal with stance cycle pairs
+# (LON → LOFF), which the report uses to normalize the x-axis to 0–100%.
 
 - parameter: Left GRF
   set: left
   steps:
     - vector: [ForcePlate1.fx, ForcePlate1.fy, ForcePlate1.fz]
     - divide: [$prev, BodyWeightNewton]
+    - eventMask: [$prev, LON_force, LOFF_force]
 
 - parameter: Right GRF
   set: right
   steps:
     - vector: [ForcePlate2.fx, ForcePlate2.fy, ForcePlate2.fz]
     - divide: [$prev, BodyWeightNewton]
+    - eventMask: [$prev, RON_force, ROFF_force]
 
 
 ########################
