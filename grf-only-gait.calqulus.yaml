@@ -6,7 +6,7 @@
 # Assumptions:
 #   - ForcePlate1 = left foot, ForcePlate2 = right foot
 #   - Body mass must be set as a session field in QTM (required for BW normalization)
-#   - Threshold for event detection = 5% body weight (~20–35 N for a typical adult)
+#   - Event detection uses a fixed 20 N threshold (no body mass dependency)
 #
 # Parameter and event names match the Qualisys web report template:
 #   Left GRF / Right GRF          →  time series GRF plots
@@ -27,16 +27,9 @@
     - subtract: [$length, 1]
 
 
-# --- Event detection threshold: 5% body weight ---
-
-- parameter: GRF_threshold
-  steps:
-    - multiply: [$bodyMass, 9.81]
-    - multiply: [$prev, 0.05]
-
-
 # --- Left foot (ForcePlate1): raw threshold events ---
-# Low-pass filter reduces noise spikes before threshold crossing detection.
+# Fixed 20 N threshold — avoids dependency on $bodyMass for event detection.
+# Low-pass filter at 50 Hz reduces noise spikes before threshold crossing.
 
 - event: LON_raw
   steps:
@@ -44,7 +37,7 @@
     - lowpass:
       cutoff: 50
     - threshold: $prev
-      value: GRF_threshold
+      value: 20
       direction: up
 
 - event: LOFF_raw
@@ -53,7 +46,7 @@
     - lowpass:
       cutoff: 50
     - threshold: $prev
-      value: GRF_threshold
+      value: 20
       direction: down
 
 
@@ -80,7 +73,7 @@
     - lowpass:
       cutoff: 50
     - threshold: $prev
-      value: GRF_threshold
+      value: 20
       direction: up
 
 - event: ROFF_raw
@@ -89,7 +82,7 @@
     - lowpass:
       cutoff: 50
     - threshold: $prev
-      value: GRF_threshold
+      value: 20
       direction: down
 
 
@@ -120,9 +113,8 @@
 ####################
 ## GRF TIME SERIES ##
 ####################
-# Named to match the Qualisys web report template (Left GRF / Right GRF).
-# eventMask is required — it annotates the signal with stance cycle pairs
-# (LON → LOFF), which the report uses to normalize the x-axis to 0–100%.
+# eventMask annotates the signal with stance cycle pairs (LON → LOFF),
+# which the report uses to normalize the x-axis to 0–100% stance phase.
 
 - parameter: Left GRF
   set: left
