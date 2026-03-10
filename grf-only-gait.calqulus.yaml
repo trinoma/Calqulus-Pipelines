@@ -1,24 +1,22 @@
 # GRF-Only Gait Analysis Pipeline
 #
-# Detects gait events (foot strike, foot off) and exports ground reaction
-# force time series using force plate data only — no kinematics required.
+# Detects gait events and exports ground reaction force using force plate
+# data only — no kinematics or skeleton required.
 #
 # Assumptions:
-#   - ForcePlate1 = one foot (e.g. left), ForcePlate2 = other foot (e.g. right)
-#   - Force plate vertical component (fz) is used for event detection
-#   - Body mass entered as a session field in QTM (used for BW normalization)
-#   - Event detection threshold = 5% body weight (≈ 20–35 N for a typical adult)
+#   - ForcePlate1 = left foot, ForcePlate2 = right foot
+#   - Body mass must be set as a session field in QTM (required for BW normalization)
+#   - Threshold for event detection = 5% body weight (~20–35 N for a typical adult)
 #
-# Gait cycle definition:
-#   Each cycle runs from Foot Strike to next Foot Strike on the same force plate.
-#   (FP1_FS → FP1_FS, FP2_FS → FP2_FS)
+# Parameter and event names match the Qualisys web report template:
+#   Left GRF / Right GRF          →  time series GRF plots
+#   LON_force / LOFF_force        →  left gait cycle events
+#   RON_force / ROFF_force        →  right gait cycle events
 
 
 ############
 ## EVENTS ##
 ############
-
-# --- Boundary markers ---
 
 - event: BOF
   steps:
@@ -29,8 +27,7 @@
     - subtract: [$length, 1]
 
 
-# --- Event detection threshold (5% body weight) ---
-# Used as option input for threshold steps below.
+# --- Event detection threshold: 5% body weight ---
 
 - parameter: GRF_threshold
   steps:
@@ -38,10 +35,10 @@
     - multiply: [$prev, 0.05]
 
 
-# --- Force Plate 1: raw threshold events ---
-# Low-pass filter applied before threshold to reduce noise artifacts.
+# --- Left foot (ForcePlate1): raw threshold events ---
+# Low-pass filter reduces noise spikes before threshold crossing detection.
 
-- event: FP1_FS_raw
+- event: LON_raw
   steps:
     - import: ForcePlate1.fz
     - lowpass:
@@ -50,7 +47,7 @@
       value: GRF_threshold
       direction: up
 
-- event: FP1_FO_raw
+- event: LOFF_raw
   steps:
     - import: ForcePlate1.fz
     - lowpass:
@@ -60,24 +57,24 @@
       direction: down
 
 
-# --- Force Plate 1: refined events (strict FS→FO alternation) ---
+# --- Left foot: refined events (enforces strict ON→OFF alternation) ---
 
-- event: FP1_FS
+- event: LON_force
   set: left
   steps:
-    - refineEvent: FP1_FS_raw
-      sequence: [FP1_FS_raw, FP1_FO_raw]
+    - refineEvent: LON_raw
+      sequence: [LON_raw, LOFF_raw]
 
-- event: FP1_FO
+- event: LOFF_force
   set: left
   steps:
-    - refineEvent: FP1_FO_raw
-      sequence: [FP1_FS_raw, FP1_FO_raw]
+    - refineEvent: LOFF_raw
+      sequence: [LON_raw, LOFF_raw]
 
 
-# --- Force Plate 2: raw threshold events ---
+# --- Right foot (ForcePlate2): raw threshold events ---
 
-- event: FP2_FS_raw
+- event: RON_raw
   steps:
     - import: ForcePlate2.fz
     - lowpass:
@@ -86,7 +83,7 @@
       value: GRF_threshold
       direction: up
 
-- event: FP2_FO_raw
+- event: ROFF_raw
   steps:
     - import: ForcePlate2.fz
     - lowpass:
@@ -96,19 +93,19 @@
       direction: down
 
 
-# --- Force Plate 2: refined events ---
+# --- Right foot: refined events ---
 
-- event: FP2_FS
+- event: RON_force
   set: right
   steps:
-    - refineEvent: FP2_FS_raw
-      sequence: [FP2_FS_raw, FP2_FO_raw]
+    - refineEvent: RON_raw
+      sequence: [RON_raw, ROFF_raw]
 
-- event: FP2_FO
+- event: ROFF_force
   set: right
   steps:
-    - refineEvent: FP2_FO_raw
-      sequence: [FP2_FS_raw, FP2_FO_raw]
+    - refineEvent: ROFF_raw
+      sequence: [RON_raw, ROFF_raw]
 
 
 #####################
@@ -123,93 +120,76 @@
 ####################
 ## GRF TIME SERIES ##
 ####################
-# Each GRF signal is normalized to body weight (dimensionless, xBW).
-# The eventMask annotates stance phase cycles on the signal so the
-# report can normalize the time axis to 0–100% stance.
+# Named to match the Qualisys web report template (Left GRF / Right GRF).
+# No eventMask on the series — the report uses the LON/LOFF events to overlay
+# gait cycle markers on the time axis.
 
-- parameter: FP1 GRF
+- parameter: Left GRF
   set: left
   steps:
     - vector: [ForcePlate1.fx, ForcePlate1.fy, ForcePlate1.fz]
     - divide: [$prev, BodyWeightNewton]
-    - eventMask: [$prev, FP1_FS, FP1_FO]
 
-- parameter: FP2 GRF
+- parameter: Right GRF
   set: right
   steps:
     - vector: [ForcePlate2.fx, ForcePlate2.fy, ForcePlate2.fz]
     - divide: [$prev, BodyWeightNewton]
-    - eventMask: [$prev, FP2_FS, FP2_FO]
 
 
 ########################
 ## TEMPORAL PARAMETERS ##
 ########################
 
-# Stance duration: time from foot strike to foot off (seconds)
-- parameter: FP1 Stance Duration
+# Stance duration: time from foot on to foot off (seconds)
+- parameter: Left Stance Duration
   set: left
   steps:
-    - eventDuration: [FP1_FS, FP1_FO]
+    - eventDuration: [LON_force, LOFF_force]
 
-- parameter: FP2 Stance Duration
+- parameter: Right Stance Duration
   set: right
   steps:
-    - eventDuration: [FP2_FS, FP2_FO]
+    - eventDuration: [RON_force, ROFF_force]
 
-# Step time: time between consecutive foot strikes on alternating feet (seconds)
-- parameter: FP1 to FP2 Step Time
+# Step time: from one foot strike to the opposite foot strike (seconds)
+- parameter: Left to Right Step Time
   steps:
-    - eventDuration: [FP1_FS, FP2_FS]
+    - eventDuration: [LON_force, RON_force]
 
-- parameter: FP2 to FP1 Step Time
+- parameter: Right to Left Step Time
   steps:
-    - eventDuration: [FP2_FS, FP1_FS]
+    - eventDuration: [RON_force, LON_force]
 
-# Gait cycle time: time between consecutive ipsilateral foot strikes (seconds)
-- parameter: FP1 Cycle Time
+# Gait cycle time: ipsilateral foot strike to next ipsilateral foot strike (seconds)
+- parameter: Left Cycle Time
   set: left
   steps:
-    - eventDuration: [FP1_FS, FP1_FS]
+    - eventDuration: [LON_force, LON_force]
 
-- parameter: FP2 Cycle Time
+- parameter: Right Cycle Time
   set: right
   steps:
-    - eventDuration: [FP2_FS, FP2_FS]
+    - eventDuration: [RON_force, RON_force]
 
 
 ##########################
 ## LOADING PARAMETERS    ##
 ##########################
 
-# Peak vertical GRF per stance (normalized to body weight)
-- parameter: FP1 Peak vGRF
+# Peak vertical GRF per stance phase (normalized to body weight)
+- parameter: Left Peak vGRF
   set: left
   steps:
     - import: ForcePlate1.fz
     - divide: [$prev, BodyWeightNewton]
-    - eventMask: [$prev, FP1_FS, FP1_FO]
+    - eventMask: [$prev, LON_force, LOFF_force]
     - max:
 
-- parameter: FP2 Peak vGRF
+- parameter: Right Peak vGRF
   set: right
   steps:
     - import: ForcePlate2.fz
     - divide: [$prev, BodyWeightNewton]
-    - eventMask: [$prev, FP2_FS, FP2_FO]
+    - eventMask: [$prev, RON_force, ROFF_force]
     - max:
-
-# Loading rate: slope of vGRF rise from foot strike (BW/s)
-# Computed as vGRF at 20% stance divided by time to that point.
-# A rough proxy using peak value divided by stance duration.
-- parameter: FP1 Avg Loading Rate
-  set: left
-  steps:
-    - import: FP1 Peak vGRF
-    - divide: [$prev, FP1 Stance Duration]
-
-- parameter: FP2 Avg Loading Rate
-  set: right
-  steps:
-    - import: FP2 Peak vGRF
-    - divide: [$prev, FP2 Stance Duration]
