@@ -1,4 +1,136 @@
-###################
+# GRF-Only Gait Analysis Pipeline
+#
+# Detects gait events and exports ground reaction force using force plate
+# data only — no kinematics or skeleton required.
+#
+# Assumptions:
+#   - ForcePlate1 = left foot, ForcePlate2 = right foot
+#   - Body mass must be set as a session field in QTM (required for BW normalization)
+#   - Event detection uses a fixed 20 N threshold (no body mass dependency)
+#
+# Parameter and event names match the Qualisys web report template:
+#   Left GRF / Right GRF          →  time series GRF plots
+#   LON_force / LOFF_force        →  left gait cycle events
+#   RON_force / ROFF_force        →  right gait cycle events
+
+
+############
+## EVENTS ##
+############
+
+- event: BOF
+  steps:
+    - import: [0]
+
+- event: EOF
+  steps:
+    - subtract: [$length, 1]
+
+
+# --- Left foot (ForcePlate1): raw threshold events ---
+# Fixed 20 N threshold — avoids dependency on $bodyMass for event detection.
+# Low-pass filter at 50 Hz reduces noise spikes before threshold crossing.
+
+# DEBUG: check if raw force plate data is accessible at all
+- parameter: Debug_FP1_fz_raw
+  steps:
+    - import: ForcePlate1.fz
+
+- parameter: Debug_FP1_fz_filtered
+  steps:
+    - import: ForcePlate1.fz
+    - lowpass:
+      cutoff: 50
+
+- event: Debug_LON_raw_both
+  steps:
+    - import: ForcePlate1.fz
+    - lowpass:
+      cutoff: 50
+    - threshold: $prev
+      value: 20
+      direction: both
+
+- event: LON_raw
+  steps:
+    - import: ForcePlate1.fz
+    - lowpass:
+      cutoff: 50
+    - threshold: $prev
+      value: 20
+      direction: up
+
+- event: LOFF_raw
+  steps:
+    - import: ForcePlate1.fz
+    - lowpass:
+      cutoff: 50
+    - threshold: $prev
+      value: 20
+      direction: down
+
+
+# --- Left foot: refined events (enforces strict ON→OFF alternation) ---
+
+- event: LON_force
+  set: left
+  steps:
+    - refineEvent: LON_raw
+      sequence: [LON_raw, LOFF_raw]
+
+- event: LOFF_force
+  set: left
+  steps:
+    - refineEvent: LOFF_raw
+      sequence: [LON_raw, LOFF_raw]
+
+
+# --- Right foot (ForcePlate2): raw threshold events ---
+
+- event: RON_raw
+  steps:
+    - import: ForcePlate2.fz
+    - lowpass:
+      cutoff: 50
+    - threshold: $prev
+      value: 20
+      direction: up
+
+- event: ROFF_raw
+  steps:
+    - import: ForcePlate2.fz
+    - lowpass:
+      cutoff: 50
+    - threshold: $prev
+      value: 20
+      direction: down
+
+
+# --- Right foot: refined events ---
+
+- event: RON_force
+  set: right
+  steps:
+    - refineEvent: RON_raw
+      sequence: [RON_raw, ROFF_raw]
+
+- event: ROFF_force
+  set: right
+  steps:
+    - refineEvent: ROFF_raw
+      sequence: [RON_raw, ROFF_raw]
+
+
+#####################
+## NORMALIZATION    ##
+#####################
+
+- parameter: BodyWeightNewton
+  steps:
+    - multiply: [$bodyMass, 9.81]
+
+
+####################
 ## GRF TIME SERIES ##
 ####################
 # eventMask annotates the signal with stance cycle pairs (LON → LOFF),
@@ -53,3 +185,25 @@
   set: right
   steps:
     - eventDuration: [RON_force, RON_force]
+
+
+##########################
+## LOADING PARAMETERS    ##
+##########################
+
+# Peak vertical GRF per stance phase (normalized to body weight)
+- parameter: Left Peak vGRF
+  set: left
+  steps:
+    - import: ForcePlate1.fz
+    - divide: [$prev, BodyWeightNewton]
+    - eventMask: [$prev, LON_force, LOFF_force]
+    - max:
+
+- parameter: Right Peak vGRF
+  set: right
+  steps:
+    - import: ForcePlate2.fz
+    - divide: [$prev, BodyWeightNewton]
+    - eventMask: [$prev, RON_force, ROFF_force]
+    - max:
