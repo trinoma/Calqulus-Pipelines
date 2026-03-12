@@ -186,24 +186,3 @@
   steps:
     - eventDuration: [RON_force, RON_force]
 
-
-##########################
-## LOADING PARAMETERS    ##
-##########################
-
-# Peak vertical GRF per stance phase (normalized to body weight)
-- parameter: Left Peak vGRF
-  set: left
-  steps:
-    - import: ForcePlate1.fz
-    - divide: [$prev, BodyWeightNewton]
-    - eventMask: [$prev, LON_force, LOFF_force]
-    - max:
-
-- parameter: Right Peak vGRF
-  set: right
-  steps:
-    - import: ForcePlate2.fz
-    - divide: [$prev, BodyWeightNewton]
-    - eventMask: [$prev, RON_force, ROFF_force]
-    - max:
