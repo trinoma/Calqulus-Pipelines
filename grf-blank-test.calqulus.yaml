@@ -39,13 +39,13 @@
 - parameter: Debug_FP1_fz_filtered
   steps:
     - import: ForcePlate1.fz
-    - lowpass:
+    - lowpass: $prev
       cutoff: 50
 
 - event: Debug_LON_raw_both
   steps:
     - import: ForcePlate1.fz
-    - lowpass:
+    - lowpass: $prev
       cutoff: 50
     - threshold: $prev
       value: 20
@@ -54,7 +54,7 @@
 - event: LON_raw
   steps:
     - import: ForcePlate1.fz
-    - lowpass:
+    - lowpass: $prev
       cutoff: 50
     - threshold: $prev
       value: 20
@@ -64,7 +64,7 @@
 - event: LOFF_raw
   steps:
     - import: ForcePlate1.fz
-    - lowpass:
+    - lowpass: $prev
       cutoff: 50
     - threshold: $prev
       value: 20
@@ -92,7 +92,7 @@
 - event: RON_raw
   steps:
     - import: ForcePlate2.fz
-    - lowpass:
+    - lowpass: $prev
       cutoff: 50
     - threshold: $prev
       value: 20
@@ -102,7 +102,7 @@
 - event: ROFF_raw
   steps:
     - import: ForcePlate2.fz
-    - lowpass:
+    - lowpass: $prev
       cutoff: 50
     - threshold: $prev
       value: 20
@@ -153,3 +153,40 @@
     - import: [[ForcePlate2.fx, ForcePlate2.fy, ForcePlate2.fz]]
     - divide: [$prev, BodyWeightNewton]
     - eventMask: [$prev, RON_force, ROFF_force]
+
+
+########################
+## TEMPORAL PARAMETERS ##
+########################
+
+# Stance duration: time from foot on to foot off (seconds)
+- parameter: Left Stance Duration
+  set: left
+  steps:
+    - eventDuration: [LON_force, LOFF_force]
+
+- parameter: Right Stance Duration
+  set: right
+  steps:
+    - eventDuration: [RON_force, ROFF_force]
+
+# Step time: from one foot strike to the opposite foot strike (seconds)
+- parameter: Left to Right Step Time
+  steps:
+    - eventDuration: [LON_force, RON_force]
+
+- parameter: Right to Left Step Time
+  steps:
+    - eventDuration: [RON_force, LON_force]
+
+# Gait cycle time: ipsilateral foot strike to next ipsilateral foot strike (seconds)
+- parameter: Left Cycle Time
+  set: left
+  steps:
+    - eventDuration: [LON_force, LON_force]
+
+- parameter: Right Cycle Time
+  set: right
+  steps:
+    - eventDuration: [RON_force, RON_force]
+
