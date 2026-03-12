@@ -125,6 +125,15 @@
       sequence: [RON_raw, ROFF_raw]
 
 
+#####################
+## NORMALIZATION    ##
+#####################
+
+- parameter: BodyWeightNewton
+  steps:
+    - multiply: [$bodyMass, 9.81]
+
+
 ####################
 ## GRF TIME SERIES ##
 ####################
@@ -135,12 +144,14 @@
   set: left
   steps:
     - import: [[ForcePlate1.fx, ForcePlate1.fy, ForcePlate1.fz]]
+    - divide: [$prev, BodyWeightNewton]
     - eventMask: [$prev, LON_force, LOFF_force]
 
 - parameter: Right GRF
   set: right
   steps:
     - import: [[ForcePlate2.fx, ForcePlate2.fy, ForcePlate2.fz]]
+    - divide: [$prev, BodyWeightNewton]
     - eventMask: [$prev, RON_force, ROFF_force]
 
 
