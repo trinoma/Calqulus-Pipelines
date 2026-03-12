@@ -11,3 +11,14 @@
     - vector: [ForcePlate2.fx, ForcePlate2.fy, ForcePlate2.fz]
     - divide: [$prev, BodyWeightNewton]
     - eventMask: [$prev, RON_force, ROFF_force]
+
+# Stance duration: time from foot on to foot off (seconds)
+- parameter: Left Stance Duration
+  set: left
+  steps:
+    - eventDuration: [LON_force, LOFF_force]
+
+- parameter: Right Stance Duration
+  set: right
+  steps:
+    - eventDuration: [RON_force, ROFF_force]
