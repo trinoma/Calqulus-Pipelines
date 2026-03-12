@@ -27,48 +27,6 @@
     - subtract: [$length, 1]
 
 
-# --- Left foot (ForcePlate1): raw threshold events ---
-# Fixed 20 N threshold — avoids dependency on $bodyMass for event detection.
-# Low-pass filter at 50 Hz reduces noise spikes before threshold crossing.
-
-# DEBUG: check if raw force plate data is accessible at all
-- parameter: Debug_FP1_fz_raw
-  steps:
-    - import: ForcePlate1.fz
-
-- parameter: Debug_FP1_fz_filtered
-  steps:
-    - import: ForcePlate1.fz
-    - lowpass:
-      cutoff: 50
-
-- event: Debug_LON_raw_both
-  steps:
-    - import: ForcePlate1.fz
-    - lowpass:
-      cutoff: 50
-    - threshold: $prev
-      value: 20
-      direction: both
-
-- event: LON_raw
-  steps:
-    - import: ForcePlate1.fz
-    - lowpass:
-      cutoff: 50
-    - threshold: $prev
-      value: 20
-      direction: up
-
-- event: LOFF_raw
-  steps:
-    - import: ForcePlate1.fz
-    - lowpass:
-      cutoff: 50
-    - threshold: $prev
-      value: 20
-      direction: down
-
 
 # --- Left foot: refined events (enforces strict ON→OFF alternation) ---
 
