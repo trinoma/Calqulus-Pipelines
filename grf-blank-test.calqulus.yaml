@@ -44,9 +44,10 @@
     - threshold: $prev
       value: 20
       direction: up
-    - eventMask: [$prev, BOF_fixed, EOF]
+      output: thresholdEvents
+    - eventMask: [thresholdEvents, BOF_fixed, EOF]
       output: force_1
-    - eventMask: [$prev, BOF, EOF]
+    - eventMask: [thresholdEvents, BOF, EOF]
       output: force_2
     - if: empty(force_1)
       then: force_2
@@ -61,9 +62,10 @@
     - threshold: $prev
       value: 20
       direction: down
-    - eventMask: [$prev, BOF_fixed, EOF]
+      output: thresholdEvents
+    - eventMask: [thresholdEvents, BOF_fixed, EOF]
       output: force_1
-    - eventMask: [$prev, BOF, EOF]
+    - eventMask: [thresholdEvents, BOF, EOF]
       output: force_2
     - if: empty(force_1)
       then: force_2
@@ -81,9 +83,10 @@
     - threshold: $prev
       value: 20
       direction: up
-    - eventMask: [$prev, BOF_fixed, EOF]
+      output: thresholdEvents
+    - eventMask: [thresholdEvents, BOF_fixed, EOF]
       output: force_1
-    - eventMask: [$prev, BOF, EOF]
+    - eventMask: [thresholdEvents, BOF, EOF]
       output: force_2
     - if: empty(force_1)
       then: force_2
@@ -98,9 +101,10 @@
     - threshold: $prev
       value: 20
       direction: down
-    - eventMask: [$prev, BOF_fixed, EOF]
+      output: thresholdEvents
+    - eventMask: [thresholdEvents, BOF_fixed, EOF]
       output: force_1
-    - eventMask: [$prev, BOF, EOF]
+    - eventMask: [thresholdEvents, BOF, EOF]
       output: force_2
     - if: empty(force_1)
       then: force_2
@@ -111,6 +115,14 @@
 ## NORMALIZATION    ##
 #####################
 
+# WARNING: $bodyMass must be set as a session field in QTM before processing.
+# If $bodyMass is zero or unset, the division in Left GRF / Right GRF will
+# produce invalid (Inf / NaN) values. Verify the field is populated for every
+# measurement before running this pipeline.
+#
+# NOTE: BodyWeightNewton is an intermediate computation used only for GRF
+# normalization. It appears in the report JSON as a side-effect of the
+# parameter node scoping rules in Calqulus — it is not a meaningful output.
 - parameter: BodyWeightNewton
   steps:
     - multiply: [$bodyMass, 9.81]
