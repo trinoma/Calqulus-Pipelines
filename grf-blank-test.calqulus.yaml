@@ -22,74 +22,58 @@
   steps:
     - import: [0]
 
+- event: BOF_fixed
+  steps:
+    - import: [0]
+
 - event: EOF
   steps:
     - subtract: [$length, 1]
 
 
-# --- Left foot (ForcePlate1): raw threshold events ---
-# Fixed 20 N threshold — avoids dependency on $bodyMass for event detection.
-# Low-pass filter at 50 Hz reduces noise spikes before threshold crossing.
-
-# DEBUG: check if raw force plate data is accessible at all
-- parameter: Debug_FP1_fz_raw
-  steps:
-    - import: ForcePlate1.fz
-
-- parameter: Debug_FP1_fz_filtered
-  steps:
-    - import: ForcePlate1.fz
-    - lowpass: $prev
-      cutoff: 50
-
-- event: Debug_LON_raw_both
-  steps:
-    - import: ForcePlate1.fz
-    - lowpass: $prev
-      cutoff: 50
-    - threshold: $prev
-      value: 20
-      direction: both
-
-- event: LON_raw
-  steps:
-    - import: ForcePlate1.fz
-    - lowpass: $prev
-      cutoff: 50
-    - threshold: $prev
-      value: 20
-      direction: up
-    - eventMask: [$prev, BOF, EOF]
-
-- event: LOFF_raw
-  steps:
-    - import: ForcePlate1.fz
-    - lowpass: $prev
-      cutoff: 50
-    - threshold: $prev
-      value: 20
-      direction: down
-    - eventMask: [$prev, BOF, EOF]
-
-
-# --- Left foot: refined events (enforces strict ON→OFF alternation) ---
+# --- Left foot (ForcePlate1) ---
+# Fixed 20 N threshold on low-pass filtered fz.
+# BOF_fixed fallback: if no events found within BOF_fixed..EOF window, fall back to BOF..EOF.
 
 - event: LON_force
   set: left
   steps:
-    - refineEvent: LON_raw
-      sequence: [LON_raw, LOFF_raw]
+    - import: ForcePlate1.fz
+    - lowpass: $prev
+      cutoff: 50
+    - threshold: $prev
+      value: 20
+      direction: up
+    - eventMask: [$prev, BOF_fixed, EOF]
+      output: force_1
+    - eventMask: [$prev, BOF, EOF]
+      output: force_2
+    - if: empty(force_1)
+      then: force_2
+      else: force_1
 
 - event: LOFF_force
   set: left
   steps:
-    - refineEvent: LOFF_raw
-      sequence: [LON_raw, LOFF_raw]
+    - import: ForcePlate1.fz
+    - lowpass: $prev
+      cutoff: 50
+    - threshold: $prev
+      value: 20
+      direction: down
+    - eventMask: [$prev, BOF_fixed, EOF]
+      output: force_1
+    - eventMask: [$prev, BOF, EOF]
+      output: force_2
+    - if: empty(force_1)
+      then: force_2
+      else: force_1
 
 
-# --- Right foot (ForcePlate2): raw threshold events ---
+# --- Right foot (ForcePlate2) ---
 
-- event: RON_raw
+- event: RON_force
+  set: right
   steps:
     - import: ForcePlate2.fz
     - lowpass: $prev
@@ -97,9 +81,16 @@
     - threshold: $prev
       value: 20
       direction: up
+    - eventMask: [$prev, BOF_fixed, EOF]
+      output: force_1
     - eventMask: [$prev, BOF, EOF]
+      output: force_2
+    - if: empty(force_1)
+      then: force_2
+      else: force_1
 
-- event: ROFF_raw
+- event: ROFF_force
+  set: right
   steps:
     - import: ForcePlate2.fz
     - lowpass: $prev
@@ -107,22 +98,13 @@
     - threshold: $prev
       value: 20
       direction: down
+    - eventMask: [$prev, BOF_fixed, EOF]
+      output: force_1
     - eventMask: [$prev, BOF, EOF]
-
-
-# --- Right foot: refined events ---
-
-- event: RON_force
-  set: right
-  steps:
-    - refineEvent: RON_raw
-      sequence: [RON_raw, ROFF_raw]
-
-- event: ROFF_force
-  set: right
-  steps:
-    - refineEvent: ROFF_raw
-      sequence: [RON_raw, ROFF_raw]
+      output: force_2
+    - if: empty(force_1)
+      then: force_2
+      else: force_1
 
 
 #####################
